@@ -23,7 +23,7 @@ func main() {
 	e.GET("/show", show)
 	e.POST("/save", save)
 
-	e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.Start(":" + os.Getenv("PORT")))
 }
 
 // e.GET("/users/:id", getUser)
