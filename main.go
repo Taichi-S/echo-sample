@@ -22,6 +22,7 @@ type Employees struct {
 }
 
 func main() {
+	fmt.Println(os.Getenv("DATABASE_URL"))
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL")) // SSL は、Heroku-Postgres に接続するために必要です。 pq は自動的に ​sslmode=require​ を設定します。 ただし、別のライブラリを使用する場合、明示的に SSL を設定する必要があります。
 	// var err error
 	// db, err := sql.Open("postgres", "user=postgres password=root dbname=books_database sslmode=disable")
