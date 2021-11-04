@@ -23,6 +23,8 @@ func main() {
 	var err error
 	// db, err = sql.Open("postgres", connStr)
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	fmt.Println(os.Getenv("DATABASE_URL"))
+	fmt.Println(db)
 	if err != nil {
 		log.Fatal(err) // In production code, you’ll want to handle errors in a more graceful way.
 	}
