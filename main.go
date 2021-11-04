@@ -21,8 +21,6 @@ var db *sql.DB
 func main() {
 	var err error
 	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	fmt.Println(os.Getenv("DATABASE_URL"))
-	fmt.Println(db)
 	if err != nil {
 		log.Fatal(err) // In production code, you’ll want to handle errors in a more graceful way.
 	}
@@ -59,14 +57,10 @@ func main() {
 
 // albumsByArtist queries for albums that have the specified artist name.
 func albumsByArtist(name string) ([]Album, error) {
-	fmt.Println("albumsByArtist--------")
 	// An albums slice to hold data from returned rows.
 	var albums []Album
 
-	fmt.Println(db)
-	fmt.Println("before Query")
 	rows, err := db.Query("SELECT * FROM album WHERE artist = $1", name) // By separating the SQL statement from parameter values (rather than concatenating them with, say, fmt.Sprintf), you enable the database/sql package to send the values separate from the SQL text, removing any SQL injection risk.すべての検索クエリにはなるべくデータベースが提供するパラメータ化検索インターフェースを使用する。
-	fmt.Println("after Query")
 	if err != nil {
 		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
 	}
@@ -87,7 +81,6 @@ func albumsByArtist(name string) ([]Album, error) {
 
 // albumByID queries for the album with the specified ID.
 func albumByID(id int64) (Album, error) {
-	fmt.Println("albumByID----------")
 	// An album to hold data from the returned row.
 	var alb Album
 
@@ -104,7 +97,6 @@ func albumByID(id int64) (Album, error) {
 // addAlbum adds the specified album to the database,
 // returning the album ID of the new entry
 func addAlbum(alb Album) (int64, error) {
-	fmt.Println("addAlbum------------")
 	var lastInsertId int64
 	if err := db.QueryRow("INSERT INTO album (title, artist, price) VALUES ($1, $2, $3) RETURNING id", alb.Title, alb.Artist, alb.Price).Scan(&lastInsertId); err != nil {
 		return 0, fmt.Errorf("addAlbum: %v", err)
