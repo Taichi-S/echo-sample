@@ -1,111 +1,107 @@
-package main
+package main // Add your code to a main package so you can execute it independently.
 
 import (
-	"database/sql"
+	"database/sql" // In most cases clients will use the database/sql package instead of using pq package directly.
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/labstack/echo"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" //Import the Postgres Driver．With the driver imported, you’ll start writing code to access the database.
 )
 
-type Employee struct {
-	Id     string `json:"id"`
-	Name   string `json:"name"`
-	Salary string `json: "salary"`
-	Age    string `json : "age"`
-}
-type Employees struct {
-	Employees []Employee `json:"employees"`
+type Album struct { // use this to hold row data returned from the query
+	ID     int64
+	Title  string
+	Artist string
+	Price  float32
 }
 
+var db *sql.DB
+
 func main() {
-	fmt.Println(os.Getenv("DATABASE_URL"))
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL")) // SSL は、Heroku-Postgres に接続するために必要です。 pq は自動的に ​sslmode=require​ を設定します。 ただし、別のライブラリを使用する場合、明示的に SSL を設定する必要があります。
-	// var err error
-	// db, err := sql.Open("postgres", "user=postgres password=root dbname=books_database sslmode=disable")
+	// connStr := "host=localhost user=ichi dbname=ichi sslmode=disable"
+	var err error
+	// db, err = sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err) // In production code, you’ll want to handle errors in a more graceful way.
+	}
+
+	pingErr := db.Ping() // You’re using Ping here to confirm that the database/sql package can connect when it needs to.
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+	fmt.Println("Connected!")
+
+	albums, err := albumsByArtist("John Coltrane")
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Albums found: %v\n", albums)
 
-	if err = db.Ping(); err != nil {
-		panic(err)
-	} else {
-		fmt.Println("DB Connected...")
+	// Hard-code ID 2 here to test the query.
+	alb, err := albumByID(2)
+	if err != nil {
+		log.Fatal(err)
 	}
+	fmt.Printf("Album found: %v\n", alb)
 
-	e := echo.New()
-
-	e.POST("/employee", func(c echo.Context) error {
-		u := new(Employee)
-		if err := c.Bind(u); err != nil {
-			return err
-		}
-		sqlStatement := "INSERT INTO employees (name, salry,age)VALUES ($1, $2, $3)"
-		res, err := db.Query(sqlStatement, u.Name, u.Salary, u.Age)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(res)
-			return c.JSON(http.StatusCreated, u)
-		}
-		return c.String(http.StatusOK, "ok")
+	albID, err := addAlbum(Album{
+		Title:  "The Modern Sound of Betty Carter",
+		Artist: "Betty Carter",
+		Price:  49.99,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("ID of added album: %v\n", albID)
+}
 
-	e.PUT("/employee", func(c echo.Context) error {
-		u := new(Employee)
-		if err := c.Bind(u); err != nil {
-			return err
-		}
-		sqlStatement := "UPDATE employees SET name=$1,salary=$2,age=$3 WHERE id=$5"
-		res, err := db.Query(sqlStatement, u.Name, u.Salary, u.Age, u.Id)
-		if err != nil {
-			fmt.Println(err)
-			//return c.JSON(http.StatusCreated, u);
-		} else {
-			fmt.Println(res)
-			return c.JSON(http.StatusCreated, u)
-		}
-		return c.String(http.StatusOK, u.Id)
-	})
+// albumsByArtist queries for albums that have the specified artist name.
+func albumsByArtist(name string) ([]Album, error) {
+	// An albums slice to hold data from returned rows.
+	var albums []Album
 
-	e.DELETE("/employee/:id", func(c echo.Context) error {
-		id := c.Param("id")
-		sqlStatement := "DELETE FROM employees WHERE id = $1"
-		res, err := db.Query(sqlStatement, id)
-		if err != nil {
-			fmt.Println(err)
-			//return c.JSON(http.StatusCreated, u);
-		} else {
-			fmt.Println(res)
-			return c.JSON(http.StatusOK, "Deleted")
+	rows, err := db.Query("SELECT * FROM album WHERE artist = $1", name) // By separating the SQL statement from parameter values (rather than concatenating them with, say, fmt.Sprintf), you enable the database/sql package to send the values separate from the SQL text, removing any SQL injection risk.すべての検索クエリにはなるべくデータベースが提供するパラメータ化検索インターフェースを使用する。
+	if err != nil {
+		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+	}
+	defer rows.Close()
+	// Loop through rows, using Scan to assign column data to struct fields.
+	for rows.Next() {
+		var alb Album
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil { //Scan takes a list of pointers to Go values
+			return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
 		}
-		return c.String(http.StatusOK, id+"Deleted")
-	})
+		albums = append(albums, alb)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+	}
+	return albums, nil
+}
 
-	e.GET("/employee", func(c echo.Context) error {
-		sqlStatement := "SELECT id, name, salary, age FROM employees order by id"
-		rows, err := db.Query(sqlStatement)
-		if err != nil {
-			fmt.Println(err)
-			//return c.JSON(http.StatusCreated, u);
+// albumByID queries for the album with the specified ID.
+func albumByID(id int64) (Album, error) {
+	// An album to hold data from the returned row.
+	var alb Album
+
+	row := db.QueryRow("SELECT * FROM album WHERE id = $1", id) //QueryRow executes a query that is expected to return at most one row. QueryRow always returns a non-nil value.Errors are deferred until Row's Scan method is called.
+	if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+		if err == sql.ErrNoRows { //sql.ErrNoRows indicates that the query returned no rows
+			return alb, fmt.Errorf("albumsById %d: no such album", id)
 		}
-		defer rows.Close()
-		result := Employees{}
+		return alb, fmt.Errorf("albumsById %d: %v", id, err)
+	}
+	return alb, nil
+}
 
-		for rows.Next() {
-			employee := Employee{}
-			err2 := rows.Scan(&employee.Id, &employee.Name, &employee.Salary, &employee.Age)
-			// Exit if we get an error
-			if err2 != nil {
-				return err2
-			}
-			result.Employees = append(result.Employees, employee)
-		}
-		return c.JSON(http.StatusCreated, result)
-
-		//return c.String(http.StatusOK, "ok")
-	})
+// addAlbum adds the specified album to the database,
+// returning the album ID of the new entry
+func addAlbum(alb Album) (int64, error) {
+	var lastInsertId int64
+	if err := db.QueryRow("INSERT INTO album (title, artist, price) VALUES ($1, $2, $3) RETURNING id", alb.Title, alb.Artist, alb.Price).Scan(&lastInsertId); err != nil {
+		return 0, fmt.Errorf("addAlbum: %v", err)
+	}
+	return lastInsertId, nil
 }
