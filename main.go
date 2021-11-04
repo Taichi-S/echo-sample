@@ -65,7 +65,10 @@ func albumsByArtist(name string) ([]Album, error) {
 	// An albums slice to hold data from returned rows.
 	var albums []Album
 
+	fmt.Println(db)
+	fmt.Println("before Query")
 	rows, err := db.Query("SELECT * FROM album WHERE artist = $1", name) // By separating the SQL statement from parameter values (rather than concatenating them with, say, fmt.Sprintf), you enable the database/sql package to send the values separate from the SQL text, removing any SQL injection risk.すべての検索クエリにはなるべくデータベースが提供するパラメータ化検索インターフェースを使用する。
+	fmt.Println("after Query")
 	if err != nil {
 		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
 	}
