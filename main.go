@@ -61,6 +61,7 @@ func main() {
 
 // albumsByArtist queries for albums that have the specified artist name.
 func albumsByArtist(name string) ([]Album, error) {
+	fmt.Println("albumsByArtist--------")
 	// An albums slice to hold data from returned rows.
 	var albums []Album
 
@@ -85,6 +86,7 @@ func albumsByArtist(name string) ([]Album, error) {
 
 // albumByID queries for the album with the specified ID.
 func albumByID(id int64) (Album, error) {
+	fmt.Println("albumByID----------")
 	// An album to hold data from the returned row.
 	var alb Album
 
@@ -101,6 +103,7 @@ func albumByID(id int64) (Album, error) {
 // addAlbum adds the specified album to the database,
 // returning the album ID of the new entry
 func addAlbum(alb Album) (int64, error) {
+	fmt.Println("addAlbum------------")
 	var lastInsertId int64
 	if err := db.QueryRow("INSERT INTO album (title, artist, price) VALUES ($1, $2, $3) RETURNING id", alb.Title, alb.Artist, alb.Price).Scan(&lastInsertId); err != nil {
 		return 0, fmt.Errorf("addAlbum: %v", err)
