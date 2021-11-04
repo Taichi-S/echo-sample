@@ -16,7 +16,7 @@ type Album struct { // use this to hold row data returned from the query
 	Price  float32
 }
 
-var db *sql.DB
+var db *sql.DB // productionではグローバル変数は非推奨
 
 func main() {
 	var err error
