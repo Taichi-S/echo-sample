@@ -19,9 +19,7 @@ type Album struct { // use this to hold row data returned from the query
 var db *sql.DB
 
 func main() {
-	// connStr := "host=localhost user=ichi dbname=ichi sslmode=disable"
 	var err error
-	// db, err = sql.Open("postgres", connStr)
 	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	fmt.Println(os.Getenv("DATABASE_URL"))
 	fmt.Println(db)
