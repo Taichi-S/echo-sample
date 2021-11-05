@@ -1,5 +1,6 @@
 module myapp
 
+// +heroku goVersion go1.7
 go 1.7
 
 require (
