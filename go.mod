@@ -1,6 +1,6 @@
 module myapp
 
-go 1.15
+go 1.7
 
 require (
 	github.com/labstack/echo/v4 v4.6.1
